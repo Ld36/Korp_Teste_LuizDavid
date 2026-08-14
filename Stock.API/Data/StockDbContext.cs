@@ -8,12 +8,13 @@ public class StockDbContext : DbContext
     public StockDbContext(DbContextOptions<StockDbContext> options) : base(options) { }
 
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProcessedTransaction> ProcessedTransactions => Set<ProcessedTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Garante que o código do produto seja unico
+        // Garante que o codigo do produto seja único
         modelBuilder.Entity<Product>()
             .HasIndex(p => p.Code)
             .IsUnique();

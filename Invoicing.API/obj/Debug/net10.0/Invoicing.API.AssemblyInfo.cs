@@ -10,10 +10,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("64704354-c1ab-4587-8fda-9800edaf02b8")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("Invoicing.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+360321f144c751251ae2e51cc74934264b3d16dd")]
 [assembly: System.Reflection.AssemblyProductAttribute("Invoicing.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Invoicing.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
