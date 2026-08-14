@@ -1,0 +1,321 @@
+<div class="nf-root">
+  <!-- SIDEBAR -->
+  <aside class="nf-sidebar">
+    <div class="nf-brand">
+      <div class="nf-brand-mark">NF</div>
+      <div class="nf-brand-text">
+        <b>Notas Fiscais</b>
+        <span>SISTEMA INTERNO</span>
+      </div>
+    </div>
+    <nav class="nf-nav">
+      <button class="nf-nav-item" [class.active]="screen === 'produtos'" (click)="screen = 'produtos'">
+        📦 Produtos
+      </button>
+      <button class="nf-nav-item" [class.active]="screen === 'notas' || screen === 'novaNota' || screen === 'notaDetail'" (click)="screen = 'notas'">
+        🧾 Notas fiscais
+        @if (openInvoicesCount > 0) {
+          <span class="nf-nav-badge">{{ openInvoicesCount }} aberta{{ openInvoicesCount > 1 ? 's' : '' }}</span>
+        }
+      </button>
+    </nav>
+    <div class="nf-sidebar-spacer"></div>
+    <div class="nf-status-box">
+      <div class="nf-status-title">Status dos serviços</div>
+      <div class="nf-status-row">
+        <span class="nf-dot on"></span>
+        <span style="flex:1">Estoque (:5284)</span>
+        <span style="opacity:0.7">🌐</span>
+      </div>
+      <div class="nf-status-row">
+        <span class="nf-dot on"></span>
+        <span style="flex:1">Faturamento (:5106)</span>
+        <span style="opacity:0.7">🌐</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="nf-main">
+    <!-- TELA 1: PRODUTOS -->
+    @if (screen === 'produtos') {
+      <header class="nf-header">
+        <div class="nf-header-titles">
+          <span class="nf-eyebrow">Serviço de estoque</span>
+          <span class="nf-title">Produtos</span>
+        </div>
+        <button class="nf-btn nf-btn-primary" (click)="openNewProductModal()">
+          + Novo produto
+        </button>
+      </header>
+
+      <section class="nf-content">
+        <div class="nf-toolbar">
+          <div class="nf-search">
+            <span>🔍</span>
+            <input placeholder="Buscar por código ou descrição" [(ngModel)]="productSearchQuery" />
+          </div>
+        </div>
+
+        @if (filteredProducts.length === 0) {
+          <div class="nf-empty">
+            <div style="font-size:32px; margin-bottom:8px;">📦</div>
+            <b>Nenhum produto cadastrado</b>
+            <span>Cadastre um produto para poder incluí-lo em notas fiscais.</span>
+          </div>
+        } @else {
+          <table class="nf-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Código</th>
+                <th>Descrição</th>
+                <th style="width: 120px;">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of filteredProducts; track p.code) {
+                <tr>
+                  <td><span class="nf-code">{{ p.code }}</span></td>
+                  <td>{{ p.description }}</td>
+                  <td>
+                    <span class="nf-saldo-pill" [ngClass]="getSaldoClass(p.quantityOnHand)">
+                      {{ p.quantityOnHand }} un.
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    }
+
+    <!-- TELA 2: LISTAGEM DE NOTAS -->
+    @if (screen === 'notas') {
+      <header class="nf-header">
+        <div class="nf-header-titles">
+          <span class="nf-eyebrow">Serviço de faturamento</span>
+          <span class="nf-title">Notas fiscais</span>
+        </div>
+        <button class="nf-btn nf-btn-primary" (click)="screen = 'novaNota'">
+          + Nova nota fiscal
+        </button>
+      </header>
+
+      <section class="nf-content">
+        <div class="nf-filters">
+          @for (f of ['Todas', 'Open', 'Closed']; track f) {
+            <button class="nf-filter-chip" [class.active]="invoiceFilter === f" (click)="invoiceFilter = f">
+              {{ f === 'Open' ? 'Aberta' : f === 'Closed' ? 'Fechada' : f }}
+            </button>
+          }
+        </div>
+
+        @if (filteredInvoices.length === 0) {
+          <div class="nf-empty">
+            <div style="font-size:32px; margin-bottom:8px;">🧾</div>
+            <b>Nenhuma nota encontrada</b>
+            <span>Crie uma nova nota fiscal para começar.</span>
+          </div>
+        } @else {
+          <div class="nf-tickets">
+            @for (n of filteredInvoices; track n.id) {
+              <div class="nf-ticket" (click)="openInvoiceDetail(n)">
+                <div class="nf-ticket-head">
+                  <div class="nf-ticket-num-label">Nota nº</div>
+                  <div class="nf-ticket-num">{{ n.sequenceNumber }}</div>
+                </div>
+                <div class="nf-perf"></div>
+                <div class="nf-ticket-body">
+                  <div class="nf-ticket-row"><span>Data</span><b>{{ n.createdAt | date:'dd/MM/yyyy' }}</b></div>
+                  <div class="nf-ticket-row"><span>Itens</span><b>{{ n.items.length }} produtos</b></div>
+                  <span class="nf-stamp" [ngClass]="n.status === 'Open' ? 'aberta' : 'fechada'">
+                    {{ n.status === 'Open' ? 'Aberta' : 'Fechada' }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
+
+    <!-- TELA 3: NOVA NOTA FISCAL -->
+    @if (screen === 'novaNota') {
+      <header class="nf-header">
+        <div class="nf-header-titles">
+          <button class="nf-back" (click)="screen = 'notas'">
+            ← Notas fiscais
+          </button>
+          <span class="nf-title">Nova nota fiscal</span>
+        </div>
+        <button class="nf-btn nf-btn-primary" [disabled]="cartItems.length === 0" (click)="saveInvoice()">
+          ✓ Salvar nota (Aberta)
+        </button>
+      </header>
+
+      <section class="nf-content">
+        <div class="nf-detail-grid">
+          <!-- Catálogo -->
+          <div class="nf-panel">
+            <div class="nf-panel-head"><b>Catálogo de produtos</b></div>
+            <div class="nf-panel-body">
+              <div class="nf-search" style="max-width:none; margin-bottom:12px;">
+                <span>🔍</span>
+                <input placeholder="Buscar produto por código ou nome" [(ngModel)]="catalogSearchQuery" />
+              </div>
+              @for (p of filteredCatalogProducts; track p.code) {
+                <div class="nf-catalog-item">
+                  <div class="nf-catalog-info">
+                    <b>{{ p.description }}</b>
+                    <span>{{ p.code }} · saldo em estoque: {{ p.quantityOnHand }}</span>
+                  </div>
+                  <button class="nf-btn nf-btn-ghost nf-btn-sm" [disabled]="p.quantityOnHand <= 0" (click)="addToCart(p)">
+                    + Adicionar
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Itens Adicionados -->
+          <div class="nf-panel">
+            <div class="nf-panel-head">
+              <b>Itens da nota</b>
+              <span class="nf-mono" style="font-size:11.5px; color:var(--muted)">{{ totalCartQuantity }} un.</span>
+            </div>
+            <div class="nf-panel-body">
+              @if (cartItems.length === 0) {
+                <div style="font-size:12.5px; color:var(--muted)">Adicione produtos do catálogo ao lado.</div>
+              }
+              @for (item of cartItems; track item.productCode) {
+                <div class="nf-line-item">
+                  <div class="nf-line-item-info">
+                    <b>{{ item.description }}</b>
+                    <span>{{ item.productCode }}</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button class="nf-icon-btn" (click)="decCart(item.productCode)">−</button>
+                    <span class="nf-line-qty">{{ item.quantity }}</span>
+                    <button class="nf-icon-btn" (click)="incCart(item.productCode)">+</button>
+                    <button class="nf-icon-btn" (click)="removeCart(item.productCode)">🗑️</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- TELA 4: DETALHE / IMPRESSÃO DA NOTA -->
+    @if (screen === 'notaDetail' && selectedInvoice) {
+      <header class="nf-header">
+        <div class="nf-header-titles">
+          <button class="nf-back" (click)="screen = 'notas'">
+            ← Notas fiscais
+          </button>
+          <span class="nf-title nf-mono">Nota fiscal nº {{ selectedInvoice.sequenceNumber }}</span>
+        </div>
+        <span class="nf-stamp" [ngClass]="selectedInvoice.status === 'Open' ? 'aberta' : 'fechada'">
+          {{ selectedInvoice.status === 'Open' ? 'Aberta' : 'Fechada' }}
+        </span>
+      </header>
+
+      <section class="nf-content">
+        <div class="nf-detail-grid">
+          <div class="nf-panel">
+            <div class="nf-panel-head">
+              <b>Itens desta nota</b>
+              <span style="font-size:11.5px; color:var(--muted)">Emitida em {{ selectedInvoice.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="nf-panel-body">
+              @for (item of selectedInvoice.items; track item.id) {
+                <div class="nf-line-item">
+                  <div class="nf-line-item-info">
+                    <b>{{ item.productCode }}</b>
+                  </div>
+                  <div class="nf-line-qty">{{ item.quantity }} un.</div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="nf-panel">
+            <div class="nf-panel-head"><b>Impressão</b></div>
+            <div class="nf-print-zone">
+              @if (selectedInvoice.status !== 'Open' && !isPrinting) {
+                <div class="nf-locked-note">
+                  <span style="color:var(--stamp-green)">✓</span>
+                  <span>Esta nota já está <b>Fechada</b>. Notas fechadas não podem ser reimpressas, preservando o saldo baixado no estoque.</span>
+                </div>
+              }
+
+              @if (selectedInvoice.status === 'Open') {
+                <button class="nf-btn nf-btn-primary nf-print-btn" [disabled]="isPrinting" (click)="printInvoice(selectedInvoice)">
+                  <span [class.nf-spin]="isPrinting">{{ isPrinting ? '🔄' : '🖨️' }}</span>
+                  {{ isPrinting ? 'Processando impressão…' : 'Imprimir nota fiscal' }}
+                </button>
+
+                @if (isPrinting) {
+                  <div class="nf-banner info">
+                    <span class="nf-spin">🔄</span>
+                    <span>Comunicando com o microsserviço de Estoque para dar baixa nos saldos…</span>
+                  </div>
+                }
+
+                @if (printErrorMsg) {
+                  <div class="nf-banner error">
+                    <span>⚠️</span>
+                    <div>
+                      <b>Falha na Emissão</b>
+                      <span>{{ printErrorMsg }}</span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+  </main>
+
+  <!-- MODAL NOVO PRODUTO -->
+  @if (modalProductOpen) {
+    <div class="nf-modal-backdrop" (click)="modalProductOpen = false">
+      <div class="nf-modal" (click)="$event.stopPropagation()">
+        <div class="nf-modal-head">
+          <b>Novo produto</b>
+          <button class="nf-icon-btn" (click)="modalProductOpen = false">✕</button>
+        </div>
+        <div class="nf-modal-body">
+          <div class="nf-field">
+            <label>Código</label>
+            <input [(ngModel)]="newProduct.code" placeholder="Ex.: PRD-006" />
+          </div>
+          <div class="nf-field">
+            <label>Descrição</label>
+            <input [(ngModel)]="newProduct.description" placeholder="Nome do produto" />
+          </div>
+          <div class="nf-field">
+            <label>Saldo em estoque</label>
+            <input type="number" min="0" [(ngModel)]="newProduct.quantityOnHand" placeholder="0" />
+          </div>
+        </div>
+        <div class="nf-modal-foot">
+          <button class="nf-btn nf-btn-ghost" (click)="modalProductOpen = false">Cancelar</button>
+          <button class="nf-btn nf-btn-primary" (click)="saveNewProduct()">Salvar produto</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TOAST NOTIFICATION -->
+  @if (toast) {
+    <div class="nf-toast" [ngClass]="toast.type">
+      <span>{{ toast.type === 'success' ? '✓' : '⚠️' }}</span>
+      <span>{{ toast.message }}</span>
+    </div>
+  }
+</div>
