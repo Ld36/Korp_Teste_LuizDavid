@@ -20,10 +20,9 @@ export class App implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private destroy$ = new Subject<void>();
 
-  // Telas: 'produtos' | 'notas' | 'novaNota' | 'notaDetail'
   screen: string = 'notas';
 
-  // Dados reais das APIs
+  // Dados reais
   products: Product[] = [];
   invoices: Invoice[] = [];
   selectedInvoice: Invoice | null = null;
@@ -33,12 +32,13 @@ export class App implements OnInit, OnDestroy {
   catalogSearchQuery: string = '';
   invoiceFilter: string = 'Todas';
 
-  // Carrinho da Nova Nota
+  // Carrinho
   cartItems: { productCode: string; description: string; quantity: number }[] = [];
 
-  // Estados de Operação / RxJS
+  // Estados & Falhas
   isPrinting: boolean = false;
   printErrorMsg: string | null = null;
+  simulateStockFailure: boolean = false; // Toggle para simular falha no microsserviço de Estoque
   modalProductOpen: boolean = false;
   newProduct: Product = { code: '', description: '', quantityOnHand: 0 };
   toast: { type: 'success' | 'error'; message: string } | null = null;
@@ -53,7 +53,6 @@ export class App implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // --- CARREGAMENTO DE DADOS COM RXJS ---
   loadProducts(): void {
     this.stockService.getProducts()
       .pipe(takeUntil(this.destroy$))
@@ -62,7 +61,7 @@ export class App implements OnInit, OnDestroy {
           this.products = data;
           this.cdr.markForCheck();
         },
-        error: () => this.showToast('error', 'Falha ao carregar produtos do Estoque.')
+        error: () => this.showToast('error', 'Falha ao conectar ao serviço de Estoque.')
       });
   }
 
@@ -78,7 +77,6 @@ export class App implements OnInit, OnDestroy {
       });
   }
 
-  // --- GETTERS E FILTROS ---
   get openInvoicesCount(): number {
     return this.invoices.filter(i => i.status === 'Open').length;
   }
@@ -108,7 +106,6 @@ export class App implements OnInit, OnDestroy {
     return 'ok';
   }
 
-  // --- AÇÕES DE PRODUTO ---
   openNewProductModal(): void {
     this.newProduct = { code: '', description: '', quantityOnHand: 0 };
     this.modalProductOpen = true;
@@ -137,7 +134,6 @@ export class App implements OnInit, OnDestroy {
       });
   }
 
-  // --- AÇÕES DO CARRINHO DE NOVA NOTA ---
   addToCart(p: Product): void {
     const existing = this.cartItems.find(i => i.productCode === p.code);
     if (existing) {
@@ -200,7 +196,6 @@ export class App implements OnInit, OnDestroy {
       });
   }
 
-  // --- IMPRESSÃO / FECHAMENTO DA NOTA ---
   openInvoiceDetail(invoice: Invoice): void {
     this.selectedInvoice = invoice;
     this.printErrorMsg = null;
@@ -214,6 +209,18 @@ export class App implements OnInit, OnDestroy {
     this.printErrorMsg = null;
     this.cdr.markForCheck();
 
+    // CENÁRIO 1: Falha simulada pelo toggle do usuário para gravação
+    if (this.simulateStockFailure) {
+      setTimeout(() => {
+        this.isPrinting = false;
+        this.printErrorMsg = 'O serviço de Estoque está indisponível (Simulação de Falha). A nota permaneceu Aberta e nenhum saldo foi alterado.';
+        this.showToast('error', 'Falha na comunicação com o microsserviço de Estoque.');
+        this.cdr.markForCheck();
+      }, 1200);
+      return;
+    }
+
+    // CENÁRIO 2: Fluxo real via Invoicing.API HTTP
     this.invoicingService.printInvoice(invoice.id)
       .pipe(
         finalize(() => {
@@ -228,13 +235,13 @@ export class App implements OnInit, OnDestroy {
           if (this.selectedInvoice && this.selectedInvoice.id === invoice.id) {
             this.selectedInvoice.status = 'Closed';
           }
-          this.showToast('success', `Nota nº ${invoice.sequenceNumber} impressa e Fechada!`);
-          this.loadProducts(); // Atualiza saldos abatidos
+          this.showToast('success', `Nota nº ${invoice.sequenceNumber} impressa e Fechada com sucesso!`);
+          this.loadProducts(); // Atualiza os saldos abatidos
           this.cdr.markForCheck();
         },
         error: (err) => {
           if (err.status === 503) {
-            this.printErrorMsg = 'O serviço de Estoque está indisponível. A nota permaneceu Aberta e nenhum saldo foi alterado.';
+            this.printErrorMsg = 'O serviço de Estoque está indisponível no momento. A nota permaneceu Aberta e nenhum saldo foi alterado.';
           } else {
             this.printErrorMsg = err.error?.message || err.error || 'Erro na validação de saldo ao emitir nota.';
           }
@@ -244,7 +251,13 @@ export class App implements OnInit, OnDestroy {
       });
   }
 
-  // --- TOAST HELPER ---
+  toggleStockSimulation(): void {
+    this.simulateStockFailure = !this.simulateStockFailure;
+    this.showToast(this.simulateStockFailure ? 'error' : 'success', 
+      this.simulateStockFailure ? 'Modo de simulação: Serviço de Estoque OFFLINE' : 'Serviço de Estoque ONLINE');
+    this.cdr.markForCheck();
+  }
+
   showToast(type: 'success' | 'error', message: string): void {
     this.toast = { type, message };
     this.cdr.markForCheck();

@@ -20,22 +20,35 @@
       </button>
     </nav>
     <div class="nf-sidebar-spacer"></div>
+
+    <!-- PAINEL DE STATUS & TOGGLE DE FALHA -->
     <div class="nf-status-box">
       <div class="nf-status-title">Status dos serviços</div>
       <div class="nf-status-row">
-        <span class="nf-dot on"></span>
+        <span class="nf-dot" [ngClass]="simulateStockFailure ? 'off' : 'on'"></span>
         <span style="flex:1">Estoque (:5284)</span>
-        <span style="opacity:0.7">🌐</span>
+        <span style="font-size:11px; opacity:0.8;">{{ simulateStockFailure ? 'OFFLINE' : 'ONLINE' }}</span>
       </div>
       <div class="nf-status-row">
         <span class="nf-dot on"></span>
         <span style="flex:1">Faturamento (:5106)</span>
-        <span style="opacity:0.7">🌐</span>
+        <span style="font-size:11px; opacity:0.8;">ONLINE</span>
+      </div>
+
+      <!-- SWITCH DE SIMULAÇÃO DE INDISPONIBILIDADE -->
+      <div class="nf-sim-toggle">
+        <div class="nf-sim-label">Ambiente de teste — simular falha</div>
+        <div class="nf-switch" (click)="toggleStockSimulation()">
+          <span>Serviço Estoque</span>
+          <span class="nf-switch-track" [class.off]="simulateStockFailure">
+            <span class="nf-switch-thumb"></span>
+          </span>
+        </div>
       </div>
     </div>
   </aside>
 
-  <!-- MAIN -->
+  <!-- MAIN CONTENT -->
   <main class="nf-main">
     <!-- TELA 1: PRODUTOS -->
     @if (screen === 'produtos') {
@@ -269,7 +282,10 @@
                     <span>⚠️</span>
                     <div>
                       <b>Falha na Emissão</b>
-                      <span>{{ printErrorMsg }}</span>
+                      <p style="margin-bottom:8px;">{{ printErrorMsg }}</p>
+                      <button class="nf-btn nf-btn-danger nf-btn-sm" (click)="printInvoice(selectedInvoice)">
+                        🔄 Tentar novamente
+                      </button>
                     </div>
                   </div>
                 }
